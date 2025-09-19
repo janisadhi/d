@@ -1,42 +1,47 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 
-# This script installs Docker on Debian/Ubuntu without sudo
-# Must be run as root
+# Termux Docker installation script
+# Installs Ubuntu and Docker inside Termux
 
-set -e
+echo "Updating Termux packages..."
+pkg update -y
+pkg upgrade -y
 
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run this script as root."
-  exit 1
-fi
+echo "Installing required packages..."
+pkg install -y proot-distro git curl wget tar
 
-echo "Updating existing packages..."
+echo "Installing Ubuntu distro in Termux..."
+proot-distro install ubuntu
+echo "Ubuntu installed!"
+
+echo "Starting Ubuntu..."
+proot-distro login ubuntu -- bash <<'EOF'
+
+# Inside Ubuntu
+echo "Updating Ubuntu packages..."
 apt update -y
 apt upgrade -y
 
-echo "Installing prerequisite packages..."
-apt install -y ca-certificates curl gnupg lsb-release
+echo "Installing prerequisites for Docker..."
+apt install -y apt-transport-https ca-certificates curl gnupg lsb-release sudo
 
-echo "Adding Docker's official GPG key..."
+echo "Adding Docker GPG key..."
 mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-echo "Setting up Docker repository..."
+echo "Adding Docker repository..."
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
 
 echo "Updating package list..."
 apt update -y
 
-echo "Installing Docker Engine..."
-apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+echo "Installing Docker..."
+apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-echo "Enabling and starting Docker service..."
-systemctl enable docker
-systemctl start docker
+echo "Docker installed! You can run Docker using root inside Termux Ubuntu."
+echo "Example: sudo docker run hello-world"
 
-echo "Adding current user to docker group..."
-usermod -aG docker $SUDO_USER
+EOF
 
-echo "Docker installation completed!"
-echo "You may need to log out and log back in for group changes to take effect."
+echo "Setup complete! To use Docker, run:"
+echo "proot-distro login ubuntu"
